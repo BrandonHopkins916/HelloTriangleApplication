@@ -25,7 +25,7 @@
     <None Include="shaders\shader.slang" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Helper Function.h">
+    <ClInclude Include="HelloTriangle_Helper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -165,7 +165,7 @@
     <None Include="shaders\shader.slang" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Helper Function.h" />
+    <ClInclude Include="HelloTriangle_Helper.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
