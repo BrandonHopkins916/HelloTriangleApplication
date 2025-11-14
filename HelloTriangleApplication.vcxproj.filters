@@ -28,5 +28,11 @@
     <ClInclude Include="HelloTriangle_Helper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="helpers.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="CommandBuffer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
