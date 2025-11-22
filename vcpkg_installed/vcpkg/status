@@ -1,0 +1,91 @@
+Package: vcpkg-cmake-config
+Version: 2024-05-23
+Architecture: x64-windows
+Multi-Arch: same
+Abi: f536d4605c73c466b9c52c4405f17f6a4fb5ff2de8ea1afa7afa3e5b68e7aab7
+Status: install ok installed
+
+Package: vcpkg-cmake
+Version: 2024-04-23
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 4240bdb0abcbf79389778317b042b42908cb1a6ddb55c186153dd6123395fadb
+Status: install ok installed
+
+Package: glfw3
+Version: 3.4
+Port-Version: 1
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 19fc56d9cb5907bcf6d086ded95ff19e9bcf6e67af14f9886ea761e73304898c
+Description: GLFW is a free, Open Source, multi-platform library for OpenGL, OpenGL ES and Vulkan application development. It provides a simple, platform-independent API for creating windows, contexts and surfaces, reading input, handling events, etc.
+Status: install ok installed
+
+Package: glm
+Version: 1.0.1
+Port-Version: 3
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: e70d0937de9d2cf5a3a039133cdc8a029c39e08ce2238ff86871905c023d070f
+Description: OpenGL Mathematics (GLM)
+Status: install ok installed
+
+Package: zstd
+Version: 1.5.7
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 5838f98466b86029947b68d6f92967fe680578ab166442f599a9b2d5e1302c74
+Description: Zstandard - Fast real-time compression algorithm
+Status: install ok installed
+
+Package: ktx
+Version: 4.3.2
+Port-Version: 2
+Depends: vcpkg-cmake, vcpkg-cmake-config, zstd
+Architecture: x64-windows
+Multi-Arch: same
+Abi: e43523a0a78b0240a5d272710ea16ad470305f54f1a7108026af02d83dd135e6
+Description: The Khronos KTX library and tools.
+    Functions for writing and reading KTX files, and instantiating OpenGL®, OpenGL ES™️ and Vulkan® textures from them.
+Status: install ok installed
+
+Package: nlohmann-json
+Version: 3.12.0
+Port-Version: 1
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 911c4abe916d9177a4f1e48e044d445ff020fd5dc81efbd3865eca5f278a984d
+Description: JSON for Modern C++
+Status: install ok installed
+
+Package: stb
+Version: 2024-07-29
+Port-Version: 1
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 257fcdeca87bbd7390f22e2fc8e175b03893719c8e3913450e403aee76dd98bc
+Description: public domain header-only libraries
+Status: install ok installed
+
+Package: tinygltf
+Version: 2.9.6
+Depends: nlohmann-json, stb
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 91bf6bbb3fbe35a275a4817a5ac035cf549a597374b545b035734f60003c8a00
+Description: A header only C++11 glTF 2.0 library.
+Status: install ok installed
+
+Package: tinyobjloader
+Version: 2.0.0rc13
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 4e21891e9799251fab61ed3601d2633a9f04fa89b58b921ce1e544c1ff280717
+Description: Tiny but powerful single file wavefront obj loader
+Status: install ok installed
+

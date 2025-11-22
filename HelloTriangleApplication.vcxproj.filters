@@ -23,6 +23,8 @@
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="shaders\shader.slang" />
+    <None Include="vcpkg.json" />
+    <None Include="vcpkg-configuration.json" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="HelloTriangle_Helper.h">
@@ -34,5 +36,10 @@
     <ClInclude Include="CommandBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="textures\statue-1275469_1280.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>

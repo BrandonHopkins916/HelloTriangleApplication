@@ -163,11 +163,16 @@
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="shaders\shader.slang" />
+    <None Include="vcpkg-configuration.json" />
+    <None Include="vcpkg.json" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="helpers.h" />
     <ClInclude Include="CommandBuffer.h" />
     <ClInclude Include="HelloTriangle_Helper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="textures\statue-1275469_1280.jpg" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
@@ -192,6 +197,13 @@ $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
     <LocalDebuggerEnvironment>PATH=$(VULKAN_SDK)\Bin32
 $(LocalDebuggerEnvironment)</LocalDebuggerEnvironment>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg">
+    <VcpkgEnableManifest>false</VcpkgEnableManifest>
+    <VcpkgEnabled>false</VcpkgEnabled>
+  </PropertyGroup>
+  <PropertyGroup Label="Vcpkg" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <VcpkgInstalledDir>D:\GitHub Code\vcpkg</VcpkgInstalledDir>
   </PropertyGroup>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
