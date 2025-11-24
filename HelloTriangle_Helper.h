@@ -12,19 +12,6 @@
 #include <cstring>
 #include <vector>
 #include "helpers.h"
-// Enable the WSI extensions
-#if defined(__ANDROID__)
-#define VK_USE_PLATFORM_ANDROID_KHR
-#elif defined(__linux__)
-#define VK_USE_PLATFORM_XLIB_KHR
-#elif defined(_WIN32)
-#define VK_USE_PLATFORM_WIN32_KHR
-#endif
-
-#define GLFW_INCLUDE_VULKAN // REQUIRED only for GLFW CreateWindowSurface.
-
-// Tell SDL not to mess with main()
-#define SDL_MAIN_HANDLED
 
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -40,9 +27,24 @@
 import vulkan_hpp;
 #endif
 
+// Enable the WSI extensions
+#if defined(__ANDROID__)
+#define VK_USE_PLATFORM_ANDROID_KHR
+#elif defined(__linux__)
+#define VK_USE_PLATFORM_XLIB_KHR
+#elif defined(_WIN32)
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif
+
+// REQUIRED only for GLFW CreateWindowSurface.
+#define GLFW_INCLUDE_VULKAN
+
+// Tell SDL not to mess with main()
+#define SDL_MAIN_HANDLED
+
 // Image
 #define STB_IMAGE_IMPLEMENTATION
-#include "../stb-master/stb_image.h"
+#include "vcpkg_installed/x64-windows/include/stb_image.h"
 
 constexpr uint32_t WIDTH = 800;
 constexpr uint32_t HEIGHT = 600;
@@ -102,10 +104,10 @@ struct UniformBufferObject
 };
 
 const std::vector<Vertex> vertices = {
-    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {2.0f, 0.0f}},
+    {{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
     {{0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 2.0f}},
-    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {2.0f, 2.0f}}
+    {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+    {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {10.0f, 1.0f}}
 };
 
 const std::vector<uint16_t> indices =
