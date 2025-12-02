@@ -29,7 +29,6 @@
 #include <fstream>
 #include <array>
 
-
 #if defined(__INTELLISENSE__) || !defined(USE_CPP20_MODULES)
 #include <vulkan/vulkan_raii.hpp>
 #else
@@ -69,6 +68,8 @@ uint32_t findMemoryType(vk::raii::PhysicalDevice physicalDevice, uint32_t typeFi
 
 static vk::Format chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR>& availableFormats)
 {
+    assert(!availableFormats.empty());
+
     const auto formatIt = std::ranges::find_if(availableFormats, [](const auto& format)
         {
             return format.format == vk::Format::eB8G8R8A8Srgb && format.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear;
@@ -78,13 +79,16 @@ static vk::Format chooseSwapSurfaceFormat(const std::vector<vk::SurfaceFormatKHR
 
 static vk::PresentModeKHR chooseSwapPresentMode(const std::vector<vk::PresentModeKHR>& availablePresentModes)
 {
+    assert(std::ranges::any_of(availablePresentModes, [](auto presentMode) { return presentMode == vk::PresentModeKHR::eFifo; }));
     return std::ranges::any_of(availablePresentModes,
-        [](const vk::PresentModeKHR value) { return vk::PresentModeKHR::eMailbox == value; }) ? vk::PresentModeKHR::eMailbox : vk::PresentModeKHR::eFifo;
+        [](const vk::PresentModeKHR value) { return vk::PresentModeKHR::eMailbox == value; }) ?
+        vk::PresentModeKHR::eMailbox :
+        vk::PresentModeKHR::eFifo;
 }
 
 vk::Extent2D chooseSwapExtent (GLFWwindow* window, const vk::SurfaceCapabilitiesKHR& capabilities)
 {
-    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+    if (capabilities.currentExtent.width != 0xFFFFFFFF) {
         return capabilities.currentExtent;
     }
     int width, height;
