@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <cstring>
 #include <vector>
+#include <unordered_map>
 
 #include "helpers.h"
 
@@ -24,6 +25,8 @@
 #define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
 
 #if defined(__INTELLISENSE__) || !defined(USE_CPP20_MODULES)
 #include <vulkan/vulkan_raii.hpp>
@@ -50,8 +53,15 @@ import vulkan_hpp;
 #define STB_IMAGE_IMPLEMENTATION
 #include "vcpkg_installed/x64-windows/include/stb_image.h"
 
-constexpr uint32_t WIDTH = 800;
-constexpr uint32_t HEIGHT = 600;
+// Loading Models
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "vcpkg_installed/x64-windows/include/tiny_obj_loader.h"
+
+constexpr uint32_t WIDTH		= 800;
+constexpr uint32_t HEIGHT		= 600;
+
+const std::string MODEL_PATH	= "models/viking_room.obj";
+const std::string TEXTURE_PATH	= "textures/viking_room.png";
 
 const std::vector<char const*> validationLayers =
 {
@@ -98,34 +108,28 @@ struct Vertex
         };
     }
 
+    bool operator==(const Vertex& other) const
+    {
+        return pos == other.pos && color == other.color && texCoord == other.texCoord;
+    }
+
+};
+
+template <>
+struct std::hash<Vertex>
+{
+    size_t operator()(Vertex const& vertex) const noexcept
+    {
+        return ((hash<glm::vec3>()(vertex.pos) ^ (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^ (hash<glm::vec2>()(vertex.texCoord) << 1);
+    }
 };
 
 struct UniformBufferObject
 {
-    glm::mat4 model;
-    glm::mat4 view;
-    glm::mat4 proj;
+    alignas(16) glm::mat4 model;
+    alignas(16) glm::mat4 view;
+    alignas(16) glm::mat4 proj;
 };
-
-const std::vector<Vertex> vertices = 
-{
-    {{-0.5f, -0.5f, 0.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, 0.0f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, 0.0f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}},
-
-    {{-0.5f, -0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
-    {{0.5f, -0.5f, -0.5f}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}},
-    {{0.5f, 0.5f, -0.5f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f}},
-    {{-0.5f, 0.5f, -0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 1.0f}}
-};
-
-const std::vector<uint16_t> indices =
-{
-    0, 1, 2, 2, 3, 0,
-	4, 5, 6, 6, 7, 4
-};
-
 
 class HelloTriangleApplication
 {
@@ -176,12 +180,6 @@ private:
 	uint32_t currentFrame								= 0;
 	bool framebufferResized								= false;
 
-	// Texture Image
-    vk::raii::Image        textureImage					= nullptr;
-    vk::raii::DeviceMemory textureImageMemory			= nullptr;
-    vk::raii::ImageView    textureImageView				= nullptr;
-    vk::raii::Sampler      textureSampler				= nullptr;
-
 	// Vertex Buffers
 	vk::raii::Buffer vertexBuffer						= nullptr;
 	vk::raii::DeviceMemory vertexBufferMemory			= nullptr;
@@ -197,10 +195,21 @@ private:
 	vk::raii::DescriptorPool descriptorPool				= nullptr;
 	std::vector<vk::raii::DescriptorSet> descriptorSets;
 
+    // Texture Image
+    vk::raii::Image        textureImage					= nullptr;
+    vk::raii::DeviceMemory textureImageMemory			= nullptr;
+    vk::raii::ImageView    textureImageView				= nullptr;
+    vk::raii::Sampler      textureSampler				= nullptr;
+	uint32_t			   mipLevels;
+
 	// DEPTH
     vk::raii::Image depthImage							= nullptr;
     vk::raii::DeviceMemory depthImageMemory				= nullptr;
     vk::raii::ImageView depthImageView					= nullptr;
+
+	// VERTICES and INDICES
+    std::vector<Vertex>		vertices;
+    std::vector<uint32_t>	indices;
 
 	void initWindow()
 	{
@@ -236,6 +245,7 @@ private:
 		createTextureImage();
 		createTextureImageView();
 		createTextureSampler();
+		loadModel();
 		createVertexBuffer();
 		createIndexBuffer();
 		createUniformBuffers();
@@ -663,8 +673,10 @@ private:
 	void createTextureImage()
 	{
 		int texWidth, texHeight, texChannels;
-        stbi_uc* pixels = stbi_load("textures/texture.jpg", &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
+        stbi_uc* pixels = stbi_load(TEXTURE_PATH.c_str(), &texWidth, &texHeight, &texChannels, STBI_rgb_alpha);
         vk::DeviceSize imageSize = texWidth * texHeight * 4;
+
+		mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texWidth, texHeight)))) + 1;
 
         if (!pixels) 
 		{
@@ -682,17 +694,17 @@ private:
 
         stbi_image_free(pixels);
 
-        createImage(texWidth, texHeight, vk::Format::eR8G8B8A8Srgb, 
+        createImage(texWidth, texHeight, mipLevels, vk::Format::eR8G8B8A8Srgb, 
 			vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled, vk::MemoryPropertyFlagBits::eDeviceLocal, textureImage, textureImageMemory);
 
-        transitionImageLayout(textureImage, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
+        transitionImageLayout(textureImage, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal, mipLevels);
         copyBufferToImage(stagingBuffer, textureImage, static_cast<uint32_t>(texWidth), static_cast<uint32_t>(texHeight));
-        transitionImageLayout(textureImage, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal);
+        transitionImageLayout(textureImage, vk::ImageLayout::eTransferDstOptimal, vk::ImageLayout::eShaderReadOnlyOptimal, mipLevels);
 	}
 
     void createTextureImageView()
     {
-        textureImageView = createImageView(textureImage, vk::Format::eR8G8B8A8Srgb, vk::ImageAspectFlagBits::eColor);
+        textureImageView = createImageView(textureImage, vk::Format::eR8G8B8A8Srgb, vk::ImageAspectFlagBits::eColor, 1);
     }
 
     void createTextureSampler() 
@@ -720,8 +732,10 @@ private:
 		textureSampler = vk::raii::Sampler(device, samplerInfo);
     }
 
-	void createImage(uint32_t width,
+	void createImage(
+		uint32_t width,
 		uint32_t height,
+		uint32_t mipLevels,
 		vk::Format format,
 		vk::ImageTiling tiling,
 		vk::ImageUsageFlags usage,
@@ -735,6 +749,7 @@ private:
 		imageInfo.format = format;
 		imageInfo.extent.width = width;
 		imageInfo.extent.height = height;
+		imageInfo.mipLevels = mipLevels;
 		imageInfo.extent.depth = 1;
 		imageInfo.mipLevels = 1;
 		imageInfo.arrayLayers = 1;
@@ -755,7 +770,7 @@ private:
         image.bindMemory(imageMemory, 0);
 	}
 
-	vk::raii::ImageView createImageView(vk::raii::Image& image, vk::Format format, vk::ImageAspectFlags aspectFlags)
+	vk::raii::ImageView createImageView(vk::raii::Image& image, vk::Format format, vk::ImageAspectFlags aspectFlags, uint32_t mipLevels)
 	{
 		vk::ImageViewCreateInfo						viewInfo;
 		viewInfo.image								= image;
@@ -764,10 +779,52 @@ private:
 		viewInfo.subresourceRange.baseMipLevel		= 0;
 		viewInfo.subresourceRange.levelCount		= 1;
 		viewInfo.subresourceRange.baseArrayLayer	= 0;
-		viewInfo.subresourceRange.layerCount		= 1;
+		viewInfo.subresourceRange.layerCount		= mipLevels;
 		viewInfo.subresourceRange.aspectMask		= aspectFlags;
 
 		return vk::raii::ImageView(device, viewInfo);
+	}
+
+	void loadModel()
+	{
+		tinyobj::attrib_t						attrib;
+        std::vector<tinyobj::shape_t>			shapes;
+        std::vector<tinyobj::material_t>		materials;
+        std::string								warn, err;
+
+        if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, MODEL_PATH.c_str())) 
+		{
+            throw std::runtime_error(warn + err);
+        }
+
+		std::unordered_map<Vertex, uint32_t> uniqueVertices{};
+
+		for (const auto& shape : shapes)
+		{
+            for (const auto& index : shape.mesh.indices) 
+			{
+                Vertex vertex{};
+
+                vertex.pos = {
+                    attrib.vertices[3 * index.vertex_index + 0],
+                    attrib.vertices[3 * index.vertex_index + 1],
+                    attrib.vertices[3 * index.vertex_index + 2] };
+
+                vertex.texCoord = {
+                    attrib.texcoords[2 * index.texcoord_index + 0],
+                    1.0f - attrib.texcoords[2 * index.texcoord_index + 1] };
+
+                vertex.color = { 1.0f, 1.0f, 1.0f };
+
+                if (!uniqueVertices.contains(vertex))
+                {
+                    uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+                    vertices.push_back(vertex);
+                }
+
+                indices.push_back(uniqueVertices[vertex]);
+            }
+		}
 	}
 
 	void createVertexBuffer()
@@ -918,8 +975,11 @@ private:
 		graphicsQueue.waitIdle();
     }
 
-    void transitionImageLayout(const vk::raii::Image& image, 
-		vk::ImageLayout oldLayout, vk::ImageLayout newLayout) 
+    void transitionImageLayout(
+		const vk::raii::Image& image, 
+		vk::ImageLayout oldLayout,
+		vk::ImageLayout newLayout, 
+		uint32_t mipLevels)
 	{
         auto commandBuffer = beginSingleTimeCommands();
 
@@ -930,7 +990,12 @@ private:
 		barrier.oldLayout			= oldLayout;
 		barrier.newLayout			= newLayout;
 		barrier.image				= image;
-        barrier.subresourceRange	= { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+        //barrier.subresourceRange	= { vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+		barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+		barrier.subresourceRange.baseMipLevel = 0;
+		barrier.subresourceRange.levelCount = mipLevels;
+		barrier.subresourceRange.baseArrayLayer = 0;
+		barrier.subresourceRange.layerCount = 1;
 
         vk::PipelineStageFlags		sourceStage;
         vk::PipelineStageFlags		destinationStage;
@@ -1053,7 +1118,7 @@ private:
 		commandBuffers[currentFrame].setViewport(0, vk::Viewport(0.0f, 0.0f, static_cast<float>(swapChainExtent.width), static_cast<float>(swapChainExtent.height), 0.0f, 1.0f));
 		commandBuffers[currentFrame].setScissor(0, vk::Rect2D(vk::Offset2D(0, 0), swapChainExtent));
 		commandBuffers[currentFrame].bindVertexBuffers(0, *vertexBuffer, { 0 });
-		commandBuffers[currentFrame].bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint16);
+		commandBuffers[currentFrame].bindIndexBuffer(*indexBuffer, 0, vk::IndexType::eUint32);
 		commandBuffers[currentFrame].bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, *descriptorSets[currentFrame], nullptr);
 		commandBuffers[currentFrame].drawIndexed(static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 		commandBuffers[currentFrame].endRendering();
@@ -1121,12 +1186,12 @@ private:
 	{
 		vk::Format depthFormat = findDepthFormat();
 
-		createImage(swapChainExtent.width, swapChainExtent.height, depthFormat, vk::ImageTiling::eOptimal, 
+		createImage(swapChainExtent.width, swapChainExtent.height, 1, depthFormat, vk::ImageTiling::eOptimal, 
 			vk::ImageUsageFlagBits::eDepthStencilAttachment, 
 			vk::MemoryPropertyFlagBits::eDeviceLocal, 
 			depthImage, 
 			depthImageMemory);
-		depthImageView = createImageView(depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth);
+		depthImageView = createImageView(depthImage, depthFormat, vk::ImageAspectFlagBits::eDepth, 1);
 	}
 
     vk::Format findSupportedFormat(const std::vector<vk::Format>& candidates, vk::ImageTiling tiling, vk::FormatFeatureFlags features)
